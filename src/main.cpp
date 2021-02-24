@@ -12,8 +12,8 @@
 
     const int scanTimeSeconds = 1;
 
-    const char* ssid = "ESP32-Access-Point";
-    const char* password =  "123456789";
+    const char* ssid = "OnePlus Nord";
+    const char* password =  "NathanIsLeuk";
 
     void connectToNetwork() {
      WiFi.begin(ssid, password);
@@ -31,10 +31,22 @@
     {
         void onResult(BLEAdvertisedDevice advertisedDevice)
         {
-            if (strcmp(advertisedDevice.getName().c_str(), "Radiation") >= 0)
+            if (strcmp(advertisedDevice.getName().c_str(), "Afstand_RSSI") == 0)
             {
                 Serial.print(advertisedDevice.getName().c_str());
-                Serial.printf(": %d \n", advertisedDevice.getRSSI());
+                //Serial.printf(": %d \n", advertisedDevice.getRSSI());
+                Serial.printf(": %s \n", advertisedDevice.getManufacturerData().c_str());
+            }
+            if (strcmp(advertisedDevice.getName().c_str(), "Poster_RSSI") == 0)
+            {
+                Serial.print(advertisedDevice.getName().c_str());
+                //Serial.printf(": %d \n", advertisedDevice.getRSSI());
+                Serial.printf(": %s \n", advertisedDevice.getManufacturerData().c_str());
+            }
+            if (strcmp(advertisedDevice.getName().c_str(), "Tamara_RSSI") == 0)
+            {
+                Serial.print(advertisedDevice.getName().c_str());
+                //Serial.printf(": %d \n", advertisedDevice.getRSSI());
                 Serial.printf(": %s \n", advertisedDevice.getManufacturerData().c_str());
             }
         }
@@ -61,7 +73,8 @@
         BLEScanResults foundDevices = pBLEScan->start(scanTimeSeconds, false);
         pBLEScan->clearResults();
         long rssi = WiFi.RSSI();
-        Serial.print(rssi);
+        Serial.print("eigen meting: ");
+        Serial.println(WiFi.RSSI());
     }
 #else
     // define BTLE name
