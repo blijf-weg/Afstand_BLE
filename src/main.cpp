@@ -10,6 +10,7 @@
     BLEScan *pBLEScan;
 
     const int scanTimeSeconds = 1;
+    int test = 1100;
 
 
     class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
