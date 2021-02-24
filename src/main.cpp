@@ -4,14 +4,28 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 #include <BLECast.h>
+#include <WiFi.h>
 
 #ifndef BEACON
 
     BLEScan *pBLEScan;
 
     const int scanTimeSeconds = 1;
-    int test = 1100;
 
+    const char* ssid = "ESP32-Access-Point";
+    const char* password =  "123456789";
+
+    void connectToNetwork() {
+     WiFi.begin(ssid, password);
+ 
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        Serial.println("Establishing connection to WiFi..");
+  }
+ 
+  Serial.println("Connected to network");
+ 
+}
 
     class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     {
@@ -31,6 +45,9 @@
         Serial.begin(115200);
         Serial.println("Scanning...");
 
+        connectToNetwork();
+        Serial.println(WiFi.macAddress());
+        Serial.println(WiFi.localIP());
         BLEDevice::init("Radiation SCAN");
         pBLEScan = BLEDevice::getScan(); // create new scan
         pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks());
@@ -43,6 +60,8 @@
     {
         BLEScanResults foundDevices = pBLEScan->start(scanTimeSeconds, false);
         pBLEScan->clearResults();
+        long rssi = WiFi.RSSI();
+        Serial.print(rssi);
     }
 #else
     // define BTLE name
