@@ -43,12 +43,12 @@
                 //Serial.printf(": %d \n", advertisedDevice.getRSSI());
                 Serial.printf(": %s \n", advertisedDevice.getManufacturerData().c_str());
             }
-            /*if (strcmp(advertisedDevice.getName().c_str(), "2_RSSI") == 0)
+            if (strcmp(advertisedDevice.getName().c_str(), "2_RSSI") == 0)
             {
                 Serial.print(advertisedDevice.getName().c_str());
                 //Serial.printf(": %d \n", advertisedDevice.getRSSI());
                 Serial.printf(": %s \n", advertisedDevice.getManufacturerData().c_str());
-            }*/
+            }
         }
     };
 
@@ -56,6 +56,7 @@
     {
         Serial.begin(115200);
         Serial.println("Scanning...");
+        esp_err_t esp_wifi_get_max_tx_power(78);
 
         connectToNetwork();
         Serial.println(WiFi.macAddress());
