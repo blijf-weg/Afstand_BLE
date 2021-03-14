@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <iostream>
+#include <esp_bt.h>
 //#include <cstring>
 
 #ifndef BEACON
@@ -110,6 +111,8 @@ void reconnect() {
         pBLEScan->setActiveScan(false); // active scan (true) uses more power, but get results faster
         pBLEScan->setInterval(100);
         pBLEScan->setWindow(99); // less or equal setInterval value
+
+        esp_err_t esp_ble_tx_power_set(7);
     }
 
     void loop()
@@ -148,6 +151,7 @@ void reconnect() {
         Serial.println("Starting BLE Beacon");
 
         bleCast.begin();
+        esp_err_t esp_ble_tx_power_set(100);
     }
 
     void loop()
