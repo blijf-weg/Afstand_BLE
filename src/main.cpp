@@ -8,28 +8,23 @@
 #include <PubSubClient.h>
 #include <iostream>
 #include <esp_bt.h>
-//#include <cstring>
 
 using namespace std;
 
-#ifndef BEACON
+const int scanTimeSeconds = 1;
+const char* mqtt_server = "192.168.43.101"; //192.168.0.137
+//const char* ssid = "telenet-648FE13";
+//const char* password = "YF74spyvpdkp";
+const char* ssid = "hot";
+const char* password = "hothothot";
+const char* esp_naam = "Afstand_3";
 
-int counterReceiver = 0;
-int counterBeacon = 0;
-bool beacon = true;
+WiFiClient Afstand_3;
+PubSubClient client(Afstand_3);
 
 BLEScan *pBLEScan;
-BLECast bleCast("RadiationNathan");
+BLECast bleCast(esp_naam);
 
-const int scanTimeSeconds = 1;
-
-const char* mqtt_server = "192.168.0.137";
-
-const char* ssid = "telenet-648FE13";
-const char* password = "YF74spyvpdkp";
-
-WiFiClient espClient;
-PubSubClient client(espClient);
 long lastMsg = 0;
 char msg[50];
 int value = 0;
@@ -37,29 +32,46 @@ int value = 0;
 uint8_t cnt = 0;
 char data[5];
 
-
+bool send_to_broker = true;
 
     class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     {
         void onResult(BLEAdvertisedDevice advertisedDevice)
         {
-            if (strcmp(advertisedDevice.getName().c_str(), "RadiationNathan") == 0)
+            if (strcmp(advertisedDevice.getName().c_str(), "Afstand_0") == 0)
             {
-                //Serial.print(advertisedDevice.getName().c_str());
-                //Serial.printf(": %d \n", advertisedDevice.getRSSI());
-                Serial.printf(":binnenkomendeData %s \n", advertisedDevice.getManufacturerData().c_str());
-                Serial.println((int)advertisedDevice.getManufacturerData().c_str());
                 int rssi = advertisedDevice.getRSSI();
-                char cstr[16];
-                char* karakters = itoa(rssi, cstr, 10);
+                String rssistring= String(rssi) + "_0";
+                if(send_to_broker){
+                    client.publish("esp32/afstand/rssi",rssistring.c_str());
+                    Serial.println(rssistring.c_str());
+                }
+            }
+            else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_1") == 0)
+            {
+                int rssi = advertisedDevice.getRSSI();
                 String rssistring= String(rssi) + "_1";
-                client.publish("esp32/rssi/nathan",rssistring.c_str());
-                //client.publish("esp32/rssi/nathan", karakters);
-                Serial.println(rssistring.c_str());
-                counterReceiver++;
-                if (counterReceiver == 3 && (int)advertisedDevice.getManufacturerData().c_str()!=1){
-                    counterReceiver = 0;
-                    beacon = true;
+                if(send_to_broker){
+                    client.publish("esp32/afstand/rssi",rssistring.c_str());
+                    Serial.println(rssistring.c_str());
+                }
+            }
+            else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_2") == 0)
+            {
+                int rssi = advertisedDevice.getRSSI();
+                String rssistring= String(rssi) + "_2";
+                if(send_to_broker){
+                    client.publish("esp32/afstand/rssi",rssistring.c_str());
+                    Serial.println(rssistring.c_str());
+                }
+            }
+            else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_3") == 0)
+            {
+                int rssi = advertisedDevice.getRSSI();
+                String rssistring= String(rssi) + "_3";
+                if(send_to_broker){
+                    client.publish("esp32/afstand/rssi",rssistring.c_str());
+                    Serial.println(rssistring.c_str());
                 }
             }
         }
@@ -89,12 +101,10 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("ESP8269Client1")) {
+    if (client.connect(esp_naam)) {
       Serial.println("connected");
       // Subscribe
-      //client.subscribe("esp32/rssi/nathan");
-      client.subscribe("esp32/humidity");
-      client.subscribe("esp32/RSSI");
+      client.subscribe("esp32/afstand/control");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -105,27 +115,52 @@ void reconnect() {
   }
 }
 
+    void callback(char* topic, byte* message, unsigned int length) {
+    Serial.print("Message arrived on topic: ");
+    Serial.print(topic);
+    Serial.print(". Message: ");
+    String messageTemp;
+    
+    for (int i = 0; i < length; i++) {
+        Serial.print((char)message[i]);
+        messageTemp += (char)message[i];
+    }
+    Serial.println();
+    Serial.println(char(message[0]));
+
+    char test = (char)message[0];
+
+    if (strcmp(topic, "esp32/afstand/control") == 0){
+        if ('1' == test)
+            ESP.restart();
+        else if('2' == test)
+            send_to_broker = false;
+        else if ('3' == test)
+            send_to_broker = true;
+    }
+}
+
     void setup()
     {
         Serial.begin(115200);
         Serial.println("Scanning...");
         setup_wifi();
         client.setServer(mqtt_server, 1883);
+        client.setCallback(callback);
 
         BLEDevice::init("Radiation SCAN");
         pBLEScan = BLEDevice::getScan(); // create new scan
         pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks());
-        pBLEScan->setActiveScan(false); // active scan (true) uses more power, but get results faster, kheb dit zelf effe op true gezet
+        pBLEScan->setActiveScan(true); // active scan (true) uses more power, but get results faster, kheb dit zelf effe op true gezet
         pBLEScan->setInterval(100);
         pBLEScan->setWindow(99); // less or equal setInterval value
 
-        if (beacon){
-            bleCast.begin();
-        }
+        bleCast.begin();
 
-        esp_err_t esp_ble_tx_power_set(7);
+        if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV,ESP_PWR_LVL_P9) == OK)
+            Serial.println("Transmission power changed\n");
 
-        sprintf(data,"%d",1);
+        sprintf(data,"%d",9);
     }
 
     void loop()
@@ -138,50 +173,13 @@ void reconnect() {
   long now = millis();
   if (now - lastMsg > 1000) {
     lastMsg = now;
-        
+  }    
     // Convert the value to a char array
     char tempString[8];
     dtostrf(69, 1, 2, tempString);
-    if (!beacon){
         BLEScanResults foundDevices = pBLEScan->start(scanTimeSeconds, false);
             pBLEScan->clearResults();
-    }
-    if (beacon){
         std::string s = bleCast.setManufacturerData(data, sizeof(data));
         Serial.println(s.c_str());
         delay(1000);
-        counterBeacon++;
-        if (counterBeacon == 3){
-            counterBeacon = 0;
-            beacon = false;
-            sprintf(data,"%d",8);
-        }
-    }
-    }
-  }
-#else
-    // define BTLE name
-    // CAREFUL: each character eats into your usable adv packet length
-    BLECast bleCast("RadiationNathan");
-    
-    uint8_t cnt = 0;
-    char data[5];
-
-    void setup()
-    {
-        Serial.begin(115200);
-        Serial.println("Starting BLE Beacon");
-
-        bleCast.begin();
-        esp_err_t esp_ble_tx_power_set(100);
-    }
-
-    void loop()
-    {
-        sprintf(data,"%d",1);
-        std::string s = bleCast.setManufacturerData(data, sizeof(data));
-        //Serial.println(s.c_str());
-        Serial.println(data);
-        delay(1000);
-    }
-#endif
+}
