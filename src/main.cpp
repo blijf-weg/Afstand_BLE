@@ -142,6 +142,8 @@ void reconnect() {
 
     void setup()
     {
+        pinMode(34, OUTPUT);
+
         Serial.begin(115200);
         Serial.println("Scanning...");
         setup_wifi();
@@ -165,6 +167,8 @@ void reconnect() {
 
     void loop()
     {
+        //ledcWriteTone(34, 1000);
+
         if (!client.connected()) {
     reconnect();
   }
