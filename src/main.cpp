@@ -10,7 +10,7 @@
 
     BLEScan *pBLEScan;
 
-    const int scanTimeSeconds = 1;
+    const uint32_t scanTimeSeconds = 0.1;
 
     const char* ssid = "hot";
     const char* password =  "hothothot";
