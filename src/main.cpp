@@ -10,7 +10,7 @@
 #include <esp_bt.h>
 
 using namespace std;
-const uint_32 = 0.1;
+const uint_32_t = 0.1;
 //const int scanTimeSeconds = 1;
 const char* mqtt_server = "192.168.43.101"; //192.168.0.137
 //const char* ssid = "telenet-648FE13";
