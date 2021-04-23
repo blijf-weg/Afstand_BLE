@@ -38,6 +38,9 @@ CircBuffer buffer2;
 CircBuffer buffer3;
 CircBuffer buffer4;
 
+//array om de coordinaten bij te houden
+char** coordinaten;
+
 CircBufferStatus_t initBuffers(uint8_t size){
     CircBufferStatus_t status = buffer0.init(size);
     status = buffer1.init(size);
@@ -242,6 +245,14 @@ void reconnect() {
       Serial.println("connected");
       // Subscribe
       client.subscribe("esp32/afstand/control");
+      client.subscribe("esp32/afstand/x1");
+      client.subscribe("esp32/afstand/y1");
+      client.subscribe("esp32/afstand/x2");
+      client.subscribe("esp32/afstand/y2");
+      client.subscribe("esp32/afstand/x3");
+      client.subscribe("esp32/afstand/y3");
+      client.subscribe("esp32/afstand/x4");
+      client.subscribe("esp32/afstand/y4");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -251,6 +262,53 @@ void reconnect() {
       delay(5000);
     }
   }
+}
+
+bool controleerAfstand(char* x1, char* y1, char* x2, char* y2, double limiet){
+
+    //coordinaten die aankomen onder de vorm van char* naar float omzetten
+    float xfloat1 = String(x1).toFloat();
+    float yfloat1 = String(y1).toFloat();
+    float xfloat2 = String(x2).toFloat();
+    float yfloat2 = String(y2).toFloat();
+
+    //afstanden berekenen
+    float x12 = abs(xfloat1-xfloat2);
+    float y12 = abs(yfloat1-yfloat2);
+    float l12 = sqrt(x12*x12+y12*y12);
+
+    //limiet controleren
+    if(l12 < limiet){
+      return true;
+    }
+    else{
+      return false;
+    }
+}
+
+String bepaalAfstanden(char** punten, int lengte, double limiet){
+
+    String inbreuken = "";
+    //alle afstanden tegenover punt 1 controleren
+    for (int i = 2; i<lengte; i++){
+      if(controleerAfstand(punten[0], punten[1], punten[i], punten[i+1], limiet)){
+        inbreuken = inbreuken + "," + "1" + String(i/2 + 1);
+      }
+      i++;
+    }
+    //alle afstanden tegenover punt 2 controleren
+    for (int i = 4; i<lengte; i++){
+      if(controleerAfstand(punten[2], punten[3], punten[i], punten[i+1], limiet)){
+        inbreuken = inbreuken + "," + "2" + String(i/2 + 1);
+      }
+      i++;
+    }
+    //afstand tegenover punt 3 controleren
+    if(controleerAfstand(punten[4], punten[5], punten[6], punten[7], limiet)){
+        inbreuken = inbreuken + "," + "3" + "4";
+      }
+
+    return inbreuken;
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
@@ -275,6 +333,55 @@ void callback(char* topic, byte* message, unsigned int length) {
             send_to_broker = false;
         else if ('3' == test)
             send_to_broker = true;
+    }
+    else{
+        String onderwerp = String(topic);
+        //nakijken ofdat het om een coordinaat gaat dat is binnengekomen
+        if (onderwerp.charAt(onderwerp.length()-2) == 'x' || onderwerp.charAt(onderwerp.length()-2) == 'y'){
+            char* coordinaat;
+            for (int i = 0; i < length; i++) {
+                coordinaat[i] = (char)message[i];
+            }
+        if (onderwerp.charAt(onderwerp.length()-2) == 'x'){
+            if(onderwerp.charAt(onderwerp.length()-1) == '1'){
+                coordinaten[0] = coordinaat;
+            }
+            if(onderwerp.charAt(onderwerp.length()-1) == '2'){
+                coordinaten[2] = coordinaat;
+            }
+            if(onderwerp.charAt(onderwerp.length()-1) == '3'){
+                coordinaten[4] = coordinaat;
+            }
+            if(onderwerp.charAt(onderwerp.length()-1) == '4'){
+                coordinaten[6] = coordinaat;
+            }
+        }
+        if (onderwerp.charAt(onderwerp.length()-2) == 'y'){
+            if(onderwerp.charAt(onderwerp.length()-1) == '1'){
+                coordinaten[1] = coordinaat;
+            }
+            if(onderwerp.charAt(onderwerp.length()-1) == '2'){
+                coordinaten[3] = coordinaat;
+            }
+            if(onderwerp.charAt(onderwerp.length()-1) == '3'){
+                coordinaten[5] = coordinaat;
+            }
+            if(onderwerp.charAt(onderwerp.length()-1) == '4'){
+                coordinaten[7] = coordinaat;
+            }
+        }
+        //nakijken of er overtreders zijn of niet
+        String overtreders = bepaalAfstanden(coordinaten, 8, 1.5);
+        //resultaten versturen naar de broker
+        if (overtreders.length() != 0){
+            for (int i = 0; i<overtreders.length(); i++){
+            i++;
+            client.publish("esp32/ontsmetten/id",overtreders.substring(i,i+2).c_str());
+            i++;
+            }
+        }
+    }
+        
     }
 }
 
@@ -342,6 +449,6 @@ void loop() {
         portENTER_CRITICAL(&timerMux);
         interruptCounter--;
         portEXIT_CRITICAL(&timerMux);
-        Serial.print("An interrupt as occurred.");
+        Serial.print("An interrupt has occurred.");
     }
 }
