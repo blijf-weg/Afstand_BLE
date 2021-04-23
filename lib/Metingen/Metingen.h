@@ -5,11 +5,11 @@ class Metingen{
         double x0 = 0;
         double y0 = 0;
 
-        double x1 = 2;
+        double x1 = 2.95;
         double y1 = 0;
 
         double x2 = 0;
-        double y2 = 1.1;
+        double y2 = 2.4;
         double rssi_waarden[6];
         double afstanden[3];
 
@@ -24,6 +24,9 @@ class Metingen{
         void addRSSI(double RSSI, int punt){
             rssi_waarden[punt] = RSSI;
             rssi_waarden[punt + 3] = 1;
+        }
+        void addAfstand(double afstand, int punt){
+            afstanden[punt] = afstand;
             berekenAfstanden();
         }
         void berekenAfstanden(){
@@ -33,20 +36,6 @@ class Metingen{
                     a = false;
             }
             if(a){
-                for(int i = 0 ; i< 3; i++){
-                    if(rssi_waarden[i] > -35){
-                        afstanden[i] = pow(10, (-28 - rssi_waarden[i])/(10*3));
-                    }
-                    else if (rssi_waarden[i] > -48)
-                    {
-                       afstanden[i] = pow(10, (-41 - rssi_waarden[i])/(10*3));
-                    }
-                    else 
-                    {
-                        afstanden[i] =pow(10, (- 40 - rssi_waarden[i])/(10*3));
-                    }
-                    rssi_waarden[i+3] = 0;   
-                }
                 for(int i = 0; i < 3; i++){
                     Serial.print(rssi_waarden[i]);
                     Serial.print(" ,");
@@ -57,47 +46,41 @@ class Metingen{
         }
         void berekenSnijpunten(){
             //Snijpunten tss cirkel 0 en cirkel 1
-            double x01_1;
-            double y01_1;
-            double x01_2;
-            double y01_2;
-            berekenSnijpunt(x0,y0, afstanden[0], x1,y1, afstanden[1],&x01_1,&y01_1,&x01_2,&y01_2);
+            double x01[2]; 
+            double y01[2];
+            berekenSnijpunt(x0,y0, afstanden[0], x1,y1, afstanden[1],&x01[0],&y01[0],&x01[1],&y01[1]);
             //Snijpunten tss cirkel 0 en cirkle 2
-            double x02_1;
-            double y02_1;
-            double x02_2;
-            double y02_2;
-            berekenSnijpunt(x0,y0, afstanden[0], x2,y2, afstanden[2],&x02_1,&y02_1,&x02_2,&y02_2);
+            double x02[2]; 
+            double y02[2];
+            berekenSnijpunt(x0,y0, afstanden[0], x2,y2, afstanden[2],&x02[0],&y02[0],&x02[1],&y02[1]);
             //Snijpunten tss cirkel 1 en cirkel 2
-            double x12_1;
-            double y12_1;
-            double x12_2;
-            double y12_2;
-            berekenSnijpunt(x1,y1, afstanden[1], x2,y2, afstanden[2],&x12_1,&y12_1,&x12_2,&y12_2);
+            double x12[2]; 
+            double y12[2];
+            berekenSnijpunt(x1,y1, afstanden[1], x2,y2, afstanden[2],&x12[0],&y12[0],&x12[1],&y12[1]);
 
             Serial.println("//Snijpunten tss cirkel 0 en cirkel 1");
-            Serial.print(x01_1,4);
+            Serial.print(x01[0],4);
             Serial.print(", ");
-            Serial.println(y01_1,4);
-            Serial.print(x01_2,4);
+            Serial.println(y01[0],4);
+            Serial.print(x01[1],4);
             Serial.print(", ");
-            Serial.println(y01_2,4);
+            Serial.println(y01[1],4);
 
             Serial.println("//Snijpunten tss cirkel 0 en cirkel 2");
-            Serial.print(x02_1,4);
+            Serial.print(x02[0],4);
             Serial.print(", ");
-            Serial.println(y02_1,4);
-            Serial.print(x02_2,4);
+            Serial.println(y02[0],4);
+            Serial.print(x02[1],4);
             Serial.print(", ");
-            Serial.println(y02_2,4);
+            Serial.println(y02[1],4);
 
             Serial.println("//Snijpunten tss cirkel 1 en cirkel 2");
-            Serial.print(x12_1,4);
+            Serial.print(x12[0],4);
             Serial.print(", ");
-            Serial.println(y12_1,4);
-            Serial.print(x12_2,4);
+            Serial.println(y12[0],4);
+            Serial.print(x12[1],4);
             Serial.print(", ");
-            Serial.println(y12_2,4);
+            Serial.println(y12[1],4);
 
             //Keuze van de juiste snijpunten
             double x_punt0 = 0;
@@ -108,35 +91,84 @@ class Metingen{
             double y_punt1 = 0;
             double y_punt2 = 0;
 
-            if(x01_1 > 0 && y01_1 > 0){
-                 x_punt0 = x01_1;
-                 y_punt0 = y01_1;
-            }else{
-                 x_punt0 = x01_2;
-                 y_punt0 = y01_2; 
+
+            //De juiste snijpunten selecteren => De drie snijpunten die het dichts bij elkaar liggen 
+            //Omtrek van de driehoek berekenen voor punten die het dichts bij elkaar liggen
+            double kleinsteOmtrek = 2000000;
+            int u = 0;
+            int v = 0;
+            int w = 0;
+            for(int i = 0; i < 2; i++){
+               // if(x01[i] > 0 && y01[i] > 0){
+                    for(int j = 0; j<2; j++){
+                        //if(x02[j] > 0 && y02[j] > 0){
+                            for(int k = 0;k <2; k++){
+                                //if(x12[k] > 0 && y12[k] > 0){
+                                    double afstand01_02 = pow((x01[i] - x02[j]),2) + pow((y01[i] - y02[j]),2);  
+                                    double afstand01_12 = pow((x01[i] - x12[k]),2) +  pow((y01[i] - y12[k]),2) ;
+                                    double afstand02_12 = pow((x02[j] - x12[k]),2)  + pow((y02[j] - y12[k]),2);
+                                    double omtrek = afstand01_02 + afstand01_12 + afstand02_12;
+                                    if(kleinsteOmtrek > omtrek){
+                                        kleinsteOmtrek = omtrek;
+                                        u = i;
+                                        v = j;
+                                        w = k; 
+                                    }
+                                //}
+                            }
+                        //}
+                    }
+                //}
+
             }
 
-            if(x02_1 > 0 && y02_1 > 0){
-                 x_punt1 = x02_1;
-                 y_punt1 = y02_1;
-            }else{
-                 x_punt1 = x02_2;
-                 y_punt1 = y02_2; 
-            }
+            
+            Serial.println("Juiste snijpunten ");
+            x_punt0 = x01[u];
+            y_punt0 = y01[u];
+            Serial.print( x_punt0,4);
+            Serial.print(", ");
+            Serial.println( y_punt0,4);
 
-            if(x12_1 > 0 && y12_1 > 0){
-                 x_punt2 = x12_1;
-                 y_punt2 = y12_1;
-            }else{
-                 x_punt2 = x12_2;
-                 y_punt2 = y12_2; 
-            }
 
+            x_punt1 = x02[v];
+            y_punt1 = y02[v];
+            Serial.print( x_punt1,4);
+            Serial.print(", ");
+            Serial.println( y_punt1,4);
+
+            x_punt2 = x12[0];
+            y_punt2 = y12[0];
+            /*
+            Serial.print( x_punt2,4);
+            Serial.print(", ");
+            Serial.println( y_punt2,4);
+            */
+
+        
             double x_punt = (x_punt0 + x_punt1 + x_punt2) /3; 
             double y_punt = (y_punt0 + y_punt1 + y_punt2) /3; 
-            Serial.println(x_punt,4);
+
+            Serial.println("Punt: ");
+            Serial.print(x_punt,4);
+            Serial.print(", ");
             Serial.println(y_punt,4);
-            delay(5000);
+
+
+
+            x_punt2 = x12[1];
+            y_punt2 = y12[1];
+            Serial.print( x_punt2,4);
+            Serial.print(", ");
+            Serial.println( y_punt2,4);
+
+            x_punt = (x_punt0 + x_punt1 + x_punt2) /3; 
+            y_punt = (y_punt0 + y_punt1 + y_punt2) /3; 
+
+            Serial.println("Punt: ");
+            Serial.print(x_punt,4);
+            Serial.print(", ");
+            Serial.println(y_punt,4);
         }
         int berekenSnijpunt(double x0, double y0, double r0,double x1, double y1, double r1,double *xi, double *yi,double *xi_prime, double *yi_prime){
             double a, dx, dy, d, h, rx, ry;
@@ -156,12 +188,12 @@ class Metingen{
             if (d > (r0 + r1))
             {
                 /* no solution. circles do not intersect. */
-                return 0;
+                return 2000000;
             }
             if (d < fabs(r0 - r1))
             {
                 /* no solution. one circle is contained in the other */
-                return 0;
+                return 2000000;
             }
 
             /* 'point 2' is the point where the line through the circle

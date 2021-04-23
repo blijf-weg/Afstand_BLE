@@ -10,29 +10,40 @@
 #include <esp_bt.h>
 #include <circ-buffer.h>
 #include <Metingen.h>
+#include <math.h>
 
 using namespace std;
 
 volatile int interruptCounter;
 
 Metingen metingen;
+double calibratie0 = -42.53;
+double calibratie1 = -45.07;
+double calibratie2 = -46.93;
 
-int size = 40;
+double meterWaarde0 = (log10(2.5) * 40) + (calibratie0);
+double meterWaarde1 = (log10(2.5) * 40) + (calibratie1); 
+double meterWaarde2 = (log10(2.5) * 40) + (calibratie2); 
+
+int size = 30;
 int teller0 = 0;
 int teller1 = 0;
 int teller2=0;
 int teller3=0;
+int teller4 = 0;
 
 CircBuffer buffer0;
 CircBuffer buffer1;
 CircBuffer buffer2;
 CircBuffer buffer3;
+CircBuffer buffer4;
 
 CircBufferStatus_t initBuffers(uint8_t size){
     CircBufferStatus_t status = buffer0.init(size);
     status = buffer1.init(size);
     status = buffer2.init(size);
     status = buffer3.init(size);
+    status = buffer4.init(size);
     if(status != CB_SUCCESS){
 		return status;
 	}
@@ -58,14 +69,12 @@ const char* mqtt_server = "192.168.43.101";
 //192.168.0.137
 //const char* ssid = "telenet-648FE13";
 //const char* password = "YF74spyvpdkp";
-//const char* ssid = "D84Z82H2 9418";
-//const char* password = "73U-229k";
-const char* ssid = "hot";
-const char* password = "hothothot";
-const char* esp_naam = "Afstand_4_Nathan";
+const char* ssid = "D84Z82H2 9418";
+const char* password = "73U-229k";
+const char* esp_naam = "Afstand_3";
 
-WiFiClient Afstand_4;
-PubSubClient client(Afstand_4);
+WiFiClient Afstand_3;
+PubSubClient client(Afstand_3);
 
 BLEScan *pBLEScan;
 BLECast bleCast(esp_naam);
@@ -86,59 +95,72 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     {
         if (strcmp(advertisedDevice.getName().c_str(), "Afstand_0") == 0)
         {
-            int rssi = advertisedDevice.getRSSI();
+            //int rssi = advertisedDevice.getRSSI();
             //String rssistring= String(rssi) + "_0" + esp_naam[8];
             //Serial.println(rssistring);
             buffer0.put(advertisedDevice.getRSSI());
             teller0++;
             if(send_to_broker && teller0 == size){
                 teller0 =0;
-                //metingen.addRSSI(buffer0.getAverage(),1);
                 String rssistring = (String) buffer0.getAverage() + "_0" + esp_naam[8];
                 client.publish("esp32/afstand/rssi",rssistring.c_str());
-                //Serial.print("Buffer0 gemiddelde: ");
-                //Serial.println(rssistring.c_str());
+                Serial.print("Buffer0 gemiddelde: ");
+                Serial.println(rssistring.c_str());
+                metingen.addRSSI(buffer0.getAverage(),1);
+                double afstand = pow(10, ( meterWaarde0 - buffer0.getAverage())/(10*4));
+                metingen.addAfstand(afstand, 1);
             }
         }
         else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_1") == 0)
         {
-            int rssi = advertisedDevice.getRSSI();
+            //int rssi = advertisedDevice.getRSSI();
             buffer1.put(advertisedDevice.getRSSI());
             teller1++;
             if(send_to_broker && teller1 == size){
                 teller1 = 0;
-                //metingen.addRSSI(buffer1.getAverage(),2);
+
                 String rssistring= String(buffer1.getAverage()) + "_1" + esp_naam[8];
                 client.publish("esp32/afstand/rssi",rssistring.c_str());
-                //Serial.print("Buffer1 gemiddelde: ");
-                //Serial.println(rssistring.c_str());
+                Serial.print("Buffer1 gemiddelde: ");
+                Serial.println(rssistring.c_str());
+                metingen.addRSSI(buffer1.getAverage(),2);
+                double afstand = pow(10, (meterWaarde1 - buffer1.getAverage())/(10*4));
+                metingen.addAfstand(afstand, 2);
             }
+
         }
         else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_2") == 0)
         {
             int rssi = advertisedDevice.getRSSI();
-            //String rssistring= String(rssi) + "_2" + esp_naam[8];
+            String rssistring= String(rssi) + "_2" + esp_naam[8];
             //Serial.println(rssistring.c_str());
             buffer2.put(advertisedDevice.getRSSI());
             teller2++;
             if(send_to_broker && teller2 == size){
                 teller2 =0;
-                //metingen.addRSSI(buffer2.getAverage(),0);
                 String rssistring = (String) buffer2.getAverage() + "_2" + esp_naam[8];
                 client.publish("esp32/afstand/rssi",rssistring.c_str());
                 client.publish("esp32/afstand/rssi",rssistring.c_str());
                 Serial.print("Buffer2 gemiddelde: ");
                 Serial.println(rssistring.c_str());
+                metingen.addRSSI(buffer2.getAverage(),0);
+                double afstand = pow(10, (meterWaarde2 - buffer2.getAverage())/(10*4));
+                metingen.addAfstand(afstand, 0);
             }
         }
-        /*else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_3") == 0)
+        /*else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_4") == 0)
         {
-           // Serial.println(advertisedDevice.getRSSI());
-            int rssi = advertisedDevice.getRSSI();
-            String rssistring= String(rssi) + "_3" + esp_naam[8];
-            if(send_to_broker){
+          buffer4.put(advertisedDevice.getRSSI());
+            teller4++;
+            if(send_to_broker && teller4 == size){
+                teller4 =0;
+                String rssistring = (String) buffer4.getAverage() + "_4" + esp_naam[8];
                 client.publish("esp32/afstand/rssi",rssistring.c_str());
+                Serial.print("Buffer4 gemiddelde: ");
                 Serial.println(rssistring.c_str());
+                metingen.addRSSI(buffer4.getAverage(),3);
+                double afstand = pow(10, ( meterWaarde0 - buffer4.getAverage())/(10*4));
+                metingen.addAfstand(afstand, 3);
             }
         }*/
     }
@@ -278,8 +300,8 @@ void setup() {
     pBLEScan = BLEDevice::getScan(); // create new scan
     pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks(),true);
     pBLEScan->setActiveScan(true); // active scan (true) uses more power, but get results faster, kheb dit zelf effe op true gezet
-    pBLEScan->setInterval(50);
-    pBLEScan->setWindow(49); // less or equal setInterval value
+    pBLEScan->setInterval(40);
+    pBLEScan->setWindow(39); // less or equal setInterval value
 
     bleCast.begin();
 
