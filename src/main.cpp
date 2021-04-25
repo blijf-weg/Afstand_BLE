@@ -38,8 +38,21 @@ CircBuffer buffer2;
 CircBuffer buffer3;
 CircBuffer buffer4;
 
+//pin om de buzzer aan te sturen
+int buzzerPin = 15;
+
 //array om de coordinaten bij te houden
 char** coordinaten;
+
+//variabele om een cooldown periode te implementeren na verzenden van het alarm
+int cooldown;
+
+//vanaf deze waarde zijn spelers te dichtbij
+const int grenswaarde = -32;
+
+//variabele om begintijdstip van de buzzer bij te houden
+int piepBegin;
+bool piepActief = false;
 
 CircBufferStatus_t initBuffers(uint8_t size){
     CircBufferStatus_t status = buffer0.init(size);
@@ -75,6 +88,7 @@ const char* mqtt_server = "192.168.43.101";
 const char* ssid = "D84Z82H2 9418";
 const char* password = "73U-229k";
 const char* esp_naam = "Afstand_3";
+const char* piepkanaal = "esp32/afstand/piep/3";
 
 WiFiClient Afstand_3;
 PubSubClient client(Afstand_3);
@@ -91,6 +105,9 @@ uint8_t cnt = 0;
 char data[5];
 
 bool send_to_broker = true;
+
+void stuurAlarm();
+void piep();
 
 class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
@@ -112,6 +129,11 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 metingen.addRSSI(buffer0.getAverage(),1);
                 double afstand = pow(10, ( meterWaarde0 - buffer0.getAverage())/(10*4));
                 metingen.addAfstand(afstand, 1);
+                if (buffer0.getAverage() < 32){
+                    client.publish("esp32/afstand/^piep/0", "1");
+                    stuurAlarm();
+                    piep();
+                }
             }
         }
         else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_1") == 0)
@@ -129,6 +151,11 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 metingen.addRSSI(buffer1.getAverage(),2);
                 double afstand = pow(10, (meterWaarde1 - buffer1.getAverage())/(10*4));
                 metingen.addAfstand(afstand, 2);
+                if (buffer1.getAverage() < 32){
+                    client.publish("esp32/afstand/piep/1", "1");
+                    stuurAlarm();
+                    piep();
+                }
             }
 
         }
@@ -149,6 +176,11 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 metingen.addRSSI(buffer2.getAverage(),0);
                 double afstand = pow(10, (meterWaarde2 - buffer2.getAverage())/(10*4));
                 metingen.addAfstand(afstand, 0);
+                if (buffer2.getAverage() < 32){
+                    client.publish("esp32/afstand/^piep/2", "1");
+                    stuurAlarm();
+                    piep();
+                }
             }
         }
         /*else if (strcmp(advertisedDevice.getName().c_str(), "Afstand_4") == 0)
@@ -164,56 +196,32 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 metingen.addRSSI(buffer4.getAverage(),3);
                 double afstand = pow(10, ( meterWaarde0 - buffer4.getAverage())/(10*4));
                 metingen.addAfstand(afstand, 3);
+                if (buffer3.getAverage() < 32){
+                    client.publish("esp32/afstand/piep/3", "1");
+                    stuurAlarm();
+                    piep();
+                }
             }
         }*/
     }
 };
 
-bool bepaalCentraal(double* p1, double* p2, double* p3, double* p4, double limiet){
-    double x12 = abs(p1[0]-p2[0]);
-    double y12 = abs(p1[1]-p2[1]);
-    double l12 = sqrt(y12*y12+x12*x12);
-    cout << l12 << endl;
-    double x13 = abs(p3[0]-p1[0]);
-    double y13 = abs(p3[1]-p1[1]);
-    double l13 = sqrt(x13*x13+y13*y13);
-    cout << l13 << endl;
-    double x14 = abs(p4[0]-p1[0]);
-    double y14 = abs(p4[1] - p1[0]);
-    double l14 = sqrt(x14*x14 + y14*y14);
-    cout << l14 << endl;
-    return !(l12 < limiet || l13 < limiet || l14 < limiet);
+//functie om het alarmsignaal naar de broker te sturen
+void stuurAlarm(){
+    if (send_to_broker && millis() - cooldown > 10000){
+        client.publish("esp32/afstand/alarm", "1");
+        cooldown = millis();
+    }
 }
 
-bool bepaalTweede(double* p2, double* p3, double* p4, double limiet){
-    double x23 = abs(p2[0]-p3[0]);
-    double y23 = abs(p2[1]-p3[1]);
-    double l23 = sqrt(x23*x23 + y23*y23);
-    cout << l23 << endl;
-    double x24 = abs(p2[0]-p4[0]);
-    double y24 = abs(p2[1]-p4[1]);
-    double l24 = sqrt(x24*x24 + y24*y24);
-    cout << l24 << endl;
-    return !(l23 < limiet || l24 < limiet);
-
-}
-
-bool bepaalDerde(double* p3, double* p4, double limiet){
-    double x34 = abs(p3[0]-p4[0]);
-    double y34 = abs(p3[1]-p4[1]);
-    double l34 = sqrt(x34*x34 + y34*y34);
-    cout << l34 << endl;
-    return l34 > limiet;
-}
-
-bool checkAfstanden(double* p1, double* p2, double* p3, double* p4, double limiet){
-    bool result1 = bepaalCentraal(p1, p2, p3, p4, limiet);
-    cout << result1 << endl;
-    bool result2 = bepaalTweede(p2, p3, p4, limiet);
-    cout << result2 << endl;
-    bool result3 = bepaalDerde(p3, p4, limiet);
-    cout << result3 << endl;
-    return (result1 && result2 && result3);
+//functie om de buzzer te laten piepen
+void piep(){
+    int begin = millis();
+    digitalWrite(buzzerPin, HIGH);
+    while(millis()- begin < 10000){
+        Serial.println("aan het piepen");
+    }
+    digitalWrite(buzzerPin, LOW);
 }
 
 void setup_wifi() {
@@ -245,15 +253,22 @@ void reconnect() {
       Serial.println("connected");
       // Subscribe
       client.subscribe("esp32/afstand/control");
+      /*volgende twee kanalen zijn een beetje dom, maar ik weet ni exact hoe de coördinaten gaan 
+      bepaald worden dus dit is efkens gemakkelijk*/
       client.subscribe("esp32/afstand/x1");
       client.subscribe("esp32/afstand/y1");
+      //deze zijn ni dom
       client.subscribe("esp32/afstand/x2");
       client.subscribe("esp32/afstand/y2");
       client.subscribe("esp32/afstand/x3");
       client.subscribe("esp32/afstand/y3");
       client.subscribe("esp32/afstand/x4");
       client.subscribe("esp32/afstand/y4");
-    } else {
+
+      //pas deze waarde aan per verschillende module
+        client.subscribe(piepkanaal);
+    }
+    else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
@@ -334,6 +349,10 @@ void callback(char* topic, byte* message, unsigned int length) {
         else if ('3' == test)
             send_to_broker = true;
     }
+    if (strcmp(topic, "esp32/afstand/piep") == 0){
+        piep();
+    }
+    //het ontvangen bericht is een coordinaat
     else{
         String onderwerp = String(topic);
         //nakijken ofdat het om een coordinaat gaat dat is binnengekomen
@@ -342,6 +361,7 @@ void callback(char* topic, byte* message, unsigned int length) {
             for (int i = 0; i < length; i++) {
                 coordinaat[i] = (char)message[i];
             }
+        //coordinaat op de juiste plek in de coordinaten array steken
         if (onderwerp.charAt(onderwerp.length()-2) == 'x'){
             if(onderwerp.charAt(onderwerp.length()-1) == '1'){
                 coordinaten[0] = coordinaat;
@@ -373,15 +393,17 @@ void callback(char* topic, byte* message, unsigned int length) {
         //nakijken of er overtreders zijn of niet
         String overtreders = bepaalAfstanden(coordinaten, 8, 1.5);
         //resultaten versturen naar de broker
-        if (overtreders.length() != 0){
-            for (int i = 0; i<overtreders.length(); i++){
-            i++;
-            client.publish("esp32/ontsmetten/id",overtreders.substring(i,i+2).c_str());
-            i++;
+        if(send_to_broker){
+            if (overtreders.length() != 0){
+                stuurAlarm();
+                for (int i = 0; i<overtreders.length(); i++){
+                i++;
+                client.publish("esp32/ontsmetten/id",overtreders.substring(i,i+2).c_str());
+                i++;
             }
         }
     }
-        
+        }
     }
 }
 
@@ -417,6 +439,8 @@ void setup() {
     }
     sprintf(data,"%d",9);
     initBuffers(size);
+
+    pinMode(buzzerPin, OUTPUT);
 
 }
 
