@@ -5,11 +5,11 @@ class Metingen{
         double x0 = 0;
         double y0 = 0;
 
-        double x1 = 2.95;
+        double x1 = 3.7;
         double y1 = 0;
 
         double x2 = 0;
-        double y2 = 2.4;
+        double y2 = 2.95;
         double rssi_waarden[6];
         double afstanden[3];
 
@@ -23,13 +23,13 @@ class Metingen{
         }
         void addRSSI(double RSSI, int punt){
             rssi_waarden[punt] = RSSI;
-            rssi_waarden[punt + 3] = 1;
+            if(punt < 3)
+                rssi_waarden[punt + 3] = 1;
         }
         void addAfstand(double afstand, int punt){
             afstanden[punt] = afstand;
-            berekenAfstanden();
         }
-        void berekenAfstanden(){
+        double* berekenPositie(){
             bool a = true;
             for(int i = 3; i < 6; i++){
                 if(rssi_waarden[i] == 0)
@@ -40,11 +40,15 @@ class Metingen{
                     Serial.print(rssi_waarden[i]);
                     Serial.print(" ,");
                     Serial.println(afstanden[i], 6);
+                    rssi_waarden[i + 3] = 0;
                 }
-                berekenSnijpunten();
+                return berekenSnijpunten();
+            }
+            else{
+                return nullptr;
             }
         }
-        void berekenSnijpunten(){
+        double* berekenSnijpunten(){
             //Snijpunten tss cirkel 0 en cirkel 1
             double x01[2]; 
             double y01[2];
@@ -99,7 +103,7 @@ class Metingen{
             int v = 0;
             int w = 0;
             for(int i = 0; i < 2; i++){
-               // if(x01[i] > 0 && y01[i] > 0){
+                //if(x01[i] > 0 && y01[i] > 0){
                     for(int j = 0; j<2; j++){
                         //if(x02[j] > 0 && y02[j] > 0){
                             for(int k = 0;k <2; k++){
@@ -124,6 +128,7 @@ class Metingen{
 
             
             Serial.println("Juiste snijpunten ");
+
             x_punt0 = x01[u];
             y_punt0 = y01[u];
             Serial.print( x_punt0,4);
@@ -137,13 +142,12 @@ class Metingen{
             Serial.print(", ");
             Serial.println( y_punt1,4);
 
-            x_punt2 = x12[0];
-            y_punt2 = y12[0];
-            /*
+            x_punt2 = x12[w];
+            y_punt2 = y12[w];
             Serial.print( x_punt2,4);
             Serial.print(", ");
             Serial.println( y_punt2,4);
-            */
+            
 
         
             double x_punt = (x_punt0 + x_punt1 + x_punt2) /3; 
@@ -153,22 +157,11 @@ class Metingen{
             Serial.print(x_punt,4);
             Serial.print(", ");
             Serial.println(y_punt,4);
-
-
-
-            x_punt2 = x12[1];
-            y_punt2 = y12[1];
-            Serial.print( x_punt2,4);
-            Serial.print(", ");
-            Serial.println( y_punt2,4);
-
-            x_punt = (x_punt0 + x_punt1 + x_punt2) /3; 
-            y_punt = (y_punt0 + y_punt1 + y_punt2) /3; 
-
-            Serial.println("Punt: ");
-            Serial.print(x_punt,4);
-            Serial.print(", ");
-            Serial.println(y_punt,4);
+            
+            double* array;
+            array[0] = x_punt;
+            array[1] = y_punt; 
+            return array;
         }
         int berekenSnijpunt(double x0, double y0, double r0,double x1, double y1, double r1,double *xi, double *yi,double *xi_prime, double *yi_prime){
             double a, dx, dy, d, h, rx, ry;
