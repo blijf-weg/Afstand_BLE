@@ -42,7 +42,9 @@ class Metingen{
                     Serial.println(afstanden[i], 6);
                     rssi_waarden[i + 3] = 0;
                 }
-                return berekenSnijpunten();
+                double* returnWaarde;
+                returnWaarde =  berekenSnijpunten(); 
+                return returnWaarde;
             }
             else{
                 return nullptr;
@@ -62,6 +64,7 @@ class Metingen{
             double y12[2];
             berekenSnijpunt(x1,y1, afstanden[1], x2,y2, afstanden[2],&x12[0],&y12[0],&x12[1],&y12[1]);
 
+            /*
             Serial.println("//Snijpunten tss cirkel 0 en cirkel 1");
             Serial.print(x01[0],4);
             Serial.print(", ");
@@ -85,6 +88,7 @@ class Metingen{
             Serial.print(x12[1],4);
             Serial.print(", ");
             Serial.println(y12[1],4);
+            */
 
             //Keuze van de juiste snijpunten
             double x_punt0 = 0;
@@ -158,9 +162,10 @@ class Metingen{
             Serial.print(", ");
             Serial.println(y_punt,4);
             
-            double* array;
+            static double array[2];
             array[0] = x_punt;
             array[1] = y_punt; 
+
             return array;
         }
         int berekenSnijpunt(double x0, double y0, double r0,double x1, double y1, double r1,double *xi, double *yi,double *xi_prime, double *yi_prime){

@@ -26,8 +26,10 @@ double calibratie4 = -40.27;
 double meterWaarde0 = (log10(2.5) * 40) + (calibratie0);
 double meterWaarde1 = (log10(2.5) * 40) + (calibratie1); 
 double meterWaarde2 = (log10(2.5) * 40) + (calibratie2); 
-double meterWaarde3 = (log10(2.5) * 40) + (calibratie3);
-double meterWaarde4 = (log10(2.5) * 40) + (calibratie4);
+double meterWaarde3 = -31;
+//(log10(2.5) * 40) + (calibratie3);
+double meterWaarde4 = -31;
+//(log10(2.5) * 40) + (calibratie4);
 
 int size = 20;
 int teller0 = 0;
@@ -49,7 +51,9 @@ int buzzerPin = 15;
 char** coordinaten;
 
 //variabele om een cooldown periode te implementeren na verzenden van het alarm
-int cooldown;
+int wachttijd = 10000;
+int cooldown = -wachttijd;
+
 
 //variabele om begintijdstip van de buzzer bij te houden
 bool piepActief = false;
@@ -132,6 +136,8 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 double* coordinaten = metingen.berekenPositie();
                 
                 if(coordinaten != nullptr){
+                    Serial.print("X (in main): ");
+                    Serial.println(coordinaten[0]);
                     String s = "esp32/afstand/x" + esp_naam[8];
                     String s1 = (String) coordinaten[0];
                     client.publish(s.c_str(),s1.c_str());
@@ -169,6 +175,8 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 double* coordinaten = metingen.berekenPositie();
                 
                 if(coordinaten != nullptr){
+                    Serial.print("X (in main): ");
+                    Serial.println(coordinaten[0]);
                     String s = "esp32/afstand/x" + esp_naam[8];
                     String s1 = (String) coordinaten[0];
                     client.publish(s.c_str(),s1.c_str());
@@ -201,19 +209,21 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 
                 double* coordinaten = metingen.berekenPositie();
                 if(coordinaten != nullptr){
+                    Serial.print("X (in main): ");
+                    Serial.println(coordinaten[0]);
                     String s = "esp32/afstand/x" + esp_naam[8];
                     String s1 = (String) coordinaten[0];
                     client.publish(s.c_str(),s1.c_str());
                     s= "esp32/afstand/y" + esp_naam[8];
                     s1 = (String) coordinaten[1];
                     client.publish(s.c_str(),s1.c_str());
-                }
-
+                }                
             }
         }
         else if(strcmp(advertisedDevice.getName().c_str(),"Afstand_3") == 0){
             buffer3.put(advertisedDevice.getRSSI());
             teller3++;
+            Serial.println(advertisedDevice.getRSSI());
             if(send_to_broker && teller3  == size){
                 teller3 =0;
                 String rssistring = (String) buffer3.getAverage() + "_3" + esp_naam[8];
@@ -229,7 +239,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                     client.publish("esp32/afstand/piep/3","1");
                     Serial.println("Alarm!!!!!!");
                     stuurAlarm();
-                    //piep();
+                    piep();
                 }
             }
         }
@@ -252,7 +262,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                     client.publish("esp32/afstand/piep/4","1");
                     Serial.println("Alarm!!!!!!");
                     stuurAlarm();
-                    //piep();
+                    piep();
                 }
             }
         }
@@ -261,7 +271,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
 //functie om het alarmsignaal naar de broker te sturen
 void stuurAlarm(){
-    if (send_to_broker && millis() - cooldown > 500000){
+    if (send_to_broker && millis() - cooldown > wachttijd){
         client.publish("esp32/afstand/alarm", "1");
         cooldown = millis();
     }
@@ -269,13 +279,13 @@ void stuurAlarm(){
 
 //functie om de buzzer te laten piepen
 void piep(){
-    int begin = millis();
-    digitalWrite(buzzerPin, HIGH);
-    while(millis()- begin < 1000){
-        Serial.println("aan het piepen");
-        delay(300);
-    }
-    digitalWrite(buzzerPin, LOW);
+        int begin = millis();
+        digitalWrite(buzzerPin, HIGH);
+        while(millis()- begin < 3000){
+            Serial.println("aan het piepen");
+            delay(500);
+        }
+        digitalWrite(buzzerPin, LOW);
 }
 
 bool controleerAfstand(char* x1, char* y1, char* x2, char* y2, double limiet){
@@ -528,6 +538,7 @@ void loop() {
     Serial.println("Scanning");
     BLEScanResults foundDevices = pBLEScan->start(1);
     pBLEScan->clearResults();
+    Serial.println("Hier");
     
 
     /*if (interruptCounter > 0) {
