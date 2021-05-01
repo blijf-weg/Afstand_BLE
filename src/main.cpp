@@ -56,8 +56,12 @@ int wachttijd = 10000;
 int cooldown = -wachttijd;
 
 
-//variabele om begintijdstip van de buzzer bij te houden
+//variabele om bij te houden of de buzzer actief is
 bool piepActief = false;
+//variabele om bij te houden sinds wanneer de buzzer al aan het piepen is
+int beginTijdstip = 0;
+//variabele die het startsein moet geven om te beginnen piepen
+bool beginPiep = false;
 
 CircBufferStatus_t initBuffers(uint8_t size){
     CircBufferStatus_t status = buffer0.init(size);
@@ -113,11 +117,13 @@ bool send_to_broker = true;
 
 void stuurAlarm();
 void piep();
+void piepNonBlocking();
 
 class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
     void onResult(BLEAdvertisedDevice advertisedDevice)
     {
+        beginPiep = false;
         if (strcmp(advertisedDevice.getName().c_str(), "Afstand_0") == 0){
             //int rssi = advertisedDevice.getRSSI();
             //String rssistring= String(rssi) + "_0" + esp_naam[8];
@@ -240,7 +246,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                     client.publish("esp32/afstand/piep/3","1");
                     Serial.println("Alarm!!!!!!");
                     stuurAlarm();
-                    //piep();
+                    beginPiep = true;
                 }
             }
         }
@@ -263,10 +269,11 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                     client.publish("esp32/afstand/piep/4","1");
                     Serial.println("Alarm!!!!!!");
                     stuurAlarm();
-                    //piep();
+                    beginPiep = true;
                 }
             }
         }
+        piepNonBlocking();
     }
 };
 
@@ -279,7 +286,7 @@ void stuurAlarm(){
 }
 
 //functie om de buzzer te laten piepen
-void piep(){
+/*void piep(){
         int begin = millis();
         digitalWrite(buzzerPin, HIGH);
         while(millis()- begin < 3000){
@@ -287,6 +294,21 @@ void piep(){
             delay(500);
         }
         digitalWrite(buzzerPin, LOW);
+}*/
+
+//non blocking functie om de buzzer te laten piepen
+void piepNonBlocking(){
+    if (!piepActief && beginPiep){
+        beginTijdstip = millis();
+        digitalWrite(buzzerPin, HIGH);
+        Serial.println("beginnen met piepen");
+        piepActief = true;
+    }
+    else if (millis() - beginTijdstip > 10000 && piepActief){
+        digitalWrite(buzzerPin, LOW);
+        piepActief = false;
+        Serial.println("Stoppen met piepen");
+    }
 }
 
 bool controleerAfstand(char* x1, char* y1, char* x2, char* y2, double limiet){
@@ -369,7 +391,9 @@ void callback(char* topic, byte* message, unsigned int length) {
         if (strcmp(topic, piepkanaal) == 0){
             if(strcmp(topic,piepkanaal) == 0){
                 if(test == '1'){
-                    piep();
+                    beginPiep = true;
+                    piepNonBlocking;
+                    beginPiep = false;
                 }
             }
             //piep();
