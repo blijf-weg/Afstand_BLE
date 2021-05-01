@@ -37,9 +37,9 @@ class Metingen{
             }
             if(a){
                 for(int i = 0; i < 3; i++){
-                    Serial.print(rssi_waarden[i]);
-                    Serial.print(" ,");
-                    Serial.println(afstanden[i], 6);
+                    //Serial.print(rssi_waarden[i]);
+                    //Serial.print(" ,");
+                    //Serial.println(afstanden[i], 6);
                     rssi_waarden[i + 3] = 0;
                 }
                 double* returnWaarde;
@@ -131,36 +131,36 @@ class Metingen{
             }
 
             
-            Serial.println("Juiste snijpunten ");
+            //Serial.println("Juiste snijpunten ");
 
             x_punt0 = x01[u];
             y_punt0 = y01[u];
-            Serial.print( x_punt0,4);
-            Serial.print(", ");
-            Serial.println( y_punt0,4);
+            //Serial.print( x_punt0,4);
+            //Serial.print(", ");
+            //Serial.println( y_punt0,4);
 
 
             x_punt1 = x02[v];
             y_punt1 = y02[v];
-            Serial.print( x_punt1,4);
-            Serial.print(", ");
-            Serial.println( y_punt1,4);
+            //Serial.print( x_punt1,4);
+            //Serial.print(", ");
+            //Serial.println( y_punt1,4);
 
             x_punt2 = x12[w];
             y_punt2 = y12[w];
-            Serial.print( x_punt2,4);
-            Serial.print(", ");
-            Serial.println( y_punt2,4);
+            //Serial.print( x_punt2,4);
+            //Serial.print(", ");
+            //Serial.println( y_punt2,4);
             
 
         
             double x_punt = (x_punt0 + x_punt1 + x_punt2) /3; 
             double y_punt = (y_punt0 + y_punt1 + y_punt2) /3; 
 
-            Serial.println("Punt: ");
+            /*Serial.println("Punt: ");
             Serial.print(x_punt,4);
             Serial.print(", ");
-            Serial.println(y_punt,4);
+            Serial.println(y_punt,4);*/
             
             static double array[2];
             array[0] = x_punt;

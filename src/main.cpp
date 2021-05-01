@@ -48,7 +48,8 @@ CircBuffer buffer4;
 int buzzerPin = 15;
 
 //array om de coordinaten bij te houden
-char** coordinaten;
+int aantalESP = 2;
+char** coordinaten = new char*[aantalESP];
 
 //variabele om een cooldown periode te implementeren na verzenden van het alarm
 int wachttijd = 10000;
@@ -136,14 +137,14 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 double* coordinaten = metingen.berekenPositie();
                 
                 if(coordinaten != nullptr){
-                    Serial.print("X (in main): ");
-                    Serial.println(coordinaten[0]);
-                    String s = "esp32/afstand/x" + esp_naam[8];
+                    //Serial.print("X (in main): ");
+                    //Serial.println(coordinaten[0]);
+                    String s2 = "esp32/afstand/x"  + (String) esp_naam[8];
                     String s1 = (String) coordinaten[0];
-                    client.publish(s.c_str(),s1.c_str());
-                    s= "esp32/afstand/y" + esp_naam[8];
+                    client.publish(s2.c_str(),s1.c_str(),s1.length());
+                    s2= "esp32/afstand/y" + (String) esp_naam[8];
                     s1 = (String) coordinaten[1];
-                    client.publish(s.c_str(),s1.c_str());
+                    client.publish(s2.c_str(),s1.c_str(),s1.length());
                 }
             }
         }
@@ -175,14 +176,14 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 double* coordinaten = metingen.berekenPositie();
                 
                 if(coordinaten != nullptr){
-                    Serial.print("X (in main): ");
-                    Serial.println(coordinaten[0]);
-                    String s = "esp32/afstand/x" + esp_naam[8];
+                    //Serial.print("X (in main): ");
+                    //Serial.println(coordinaten[0]);
+                    String s2 = "esp32/afstand/x"+ (String) esp_naam[8];
                     String s1 = (String) coordinaten[0];
-                    client.publish(s.c_str(),s1.c_str());
-                    s= "esp32/afstand/y" + esp_naam[8];
+                    client.publish(s2.c_str(),s1.c_str(),s1.length());
+                    s2= "esp32/afstand/y" + (String)esp_naam[8];
                     s1 = (String) coordinaten[1];
-                    client.publish(s.c_str(),s1.c_str());
+                    client.publish(s2.c_str(),s1.c_str(),s1.length());
                 }
             }
 
@@ -209,21 +210,21 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 
                 double* coordinaten = metingen.berekenPositie();
                 if(coordinaten != nullptr){
-                    Serial.print("X (in main): ");
-                    Serial.println(coordinaten[0]);
-                    String s = "esp32/afstand/x" + esp_naam[8];
+                    //Serial.print("X (in main): ");
+                    //Serial.println(coordinaten[0]);
+                    String s2 = "esp32/afstand/x"+ (String) esp_naam[8];
                     String s1 = (String) coordinaten[0];
-                    client.publish(s.c_str(),s1.c_str());
-                    s= "esp32/afstand/y" + esp_naam[8];
+                    client.publish(s2.c_str(),s1.c_str(),s1.length());
+                    s2= "esp32/afstand/y" + (String)esp_naam[8];
                     s1 = (String) coordinaten[1];
-                    client.publish(s.c_str(),s1.c_str());
+                    client.publish(s2.c_str(),s1.c_str(),s1.length());
                 }                
             }
         }
         else if(strcmp(advertisedDevice.getName().c_str(),"Afstand_3") == 0){
             buffer3.put(advertisedDevice.getRSSI());
             teller3++;
-            Serial.println(advertisedDevice.getRSSI());
+            //Serial.println(advertisedDevice.getRSSI());
             if(send_to_broker && teller3  == size){
                 teller3 =0;
                 String rssistring = (String) buffer3.getAverage() + "_3" + esp_naam[8];
@@ -239,7 +240,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                     client.publish("esp32/afstand/piep/3","1");
                     Serial.println("Alarm!!!!!!");
                     stuurAlarm();
-                    piep();
+                    //piep();
                 }
             }
         }
@@ -262,7 +263,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                     client.publish("esp32/afstand/piep/4","1");
                     Serial.println("Alarm!!!!!!");
                     stuurAlarm();
-                    piep();
+                    //piep();
                 }
             }
         }
@@ -311,17 +312,24 @@ bool controleerAfstand(char* x1, char* y1, char* x2, char* y2, double limiet){
 }
 
 String bepaalAfstanden(char** punten, int lengte, double limiet){
-
     String inbreuken = "";
     //alle afstanden tegenover punt 1 controleren
+    for(int i = 0 ; i < 2*aantalESP;i++){
+        for(int j = 0 ; j < sizeof(punten[i]); j++){
+            Serial.print(punten[i][j]);
+        }
+        Serial.println();
+    }
     for (int i = 2; i<lengte; i++){
       if(controleerAfstand(punten[0], punten[1], punten[i], punten[i+1], limiet)){
         inbreuken = inbreuken + "," + "1" + String(i/2 + 1);
+        Serial.println(inbreuken);
       }
       i++;
     }
+    Serial.println(inbreuken);
     //alle afstanden tegenover punt 2 controleren
-    for (int i = 4; i<lengte; i++){
+    /*for (int i = 4; i<lengte; i++){
       if(controleerAfstand(punten[2], punten[3], punten[i], punten[i+1], limiet)){
         inbreuken = inbreuken + "," + "2" + String(i/2 + 1);
       }
@@ -331,6 +339,7 @@ String bepaalAfstanden(char** punten, int lengte, double limiet){
     if(controleerAfstand(punten[4], punten[5], punten[6], punten[7], limiet)){
         inbreuken = inbreuken + "," + "3" + "4";
       }
+    */
 
     return inbreuken;
 }
@@ -345,8 +354,6 @@ void callback(char* topic, byte* message, unsigned int length) {
         Serial.print((char)message[i]);
         messageTemp += (char)message[i];
     }
-    Serial.println();
-    Serial.println(char(message[0]));
 
     char test = (char)message[0];
 
@@ -372,51 +379,66 @@ void callback(char* topic, byte* message, unsigned int length) {
             String onderwerp = String(topic);
             //nakijken ofdat het om een coordinaat gaat dat is binnengekomen
             if (onderwerp.charAt(onderwerp.length()-2) == 'x' || onderwerp.charAt(onderwerp.length()-2) == 'y'){
-                char* coordinaat;
+                char* coordinaat = new char[length];
                 for (int i = 0; i < length; i++) {
                     coordinaat[i] = (char)message[i];
                 }
                 //coordinaat op de juiste plek in de coordinaten array steken
                 if (onderwerp.charAt(onderwerp.length()-2) == 'x'){
-                    if(onderwerp.charAt(onderwerp.length()-1) == '1'){
+                   /* if(onderwerp.charAt(onderwerp.length()-1) == '1'){
                         coordinaten[0] = coordinaat;
                     }
                     if(onderwerp.charAt(onderwerp.length()-1) == '2'){
                         coordinaten[2] = coordinaat;
-                    }
+                    }*/
                     if(onderwerp.charAt(onderwerp.length()-1) == '3'){
-                        coordinaten[4] = coordinaat;
+                        coordinaten[0] = coordinaat;
                     }
                     if(onderwerp.charAt(onderwerp.length()-1) == '4'){
-                        coordinaten[6] = coordinaat;
+                        coordinaten[2] = coordinaat;
                     }
                 }
                 if (onderwerp.charAt(onderwerp.length()-2) == 'y'){
-                    if(onderwerp.charAt(onderwerp.length()-1) == '1'){
+                    /*if(onderwerp.charAt(onderwerp.length()-1) == '1'){
                         coordinaten[1] = coordinaat;
                     }
                     if(onderwerp.charAt(onderwerp.length()-1) == '2'){
                         coordinaten[3] = coordinaat;
-                    }
+                    }*/
                     if(onderwerp.charAt(onderwerp.length()-1) == '3'){
-                        coordinaten[5] = coordinaat;
+                        coordinaten[1] = coordinaat;
                     }
                     if(onderwerp.charAt(onderwerp.length()-1) == '4'){
-                        coordinaten[7] = coordinaat;
+                        coordinaten[3] = coordinaat;
                     }
                 }
                 //nakijken of er overtreders zijn of niet
-                String overtreders = bepaalAfstanden(coordinaten, 8, 1.5);
-                //resultaten versturen naar de broker
-                if(send_to_broker){
-                    if (overtreders.length() != 0){
-                        stuurAlarm();
-                        for (int i = 0; i<overtreders.length(); i++){
-                        i++;
-                        client.publish("esp32/ontsmetten/id",overtreders.substring(i,i+2).c_str());
-                        i++;
+                bool b = true;
+                for(int i = 0; i< aantalESP*2; i++){
+                   if(coordinaten[i] == nullptr){
+                       b = false;
+                   }
+                }
+                if(b){
+                    for(int i = 0 ; i < 2*aantalESP;i++){
+                        for(int j = 0 ; j < sizeof(coordinaten[i]); j++){
+                            Serial.print(coordinaten[i][j]);
+                        }
+                        Serial.println();
+                    }
+                    String overtreders = bepaalAfstanden(coordinaten, aantalESP*2, 1.5);
+                    //resultaten versturen naar de broker
+                    if(send_to_broker){
+                        if (overtreders.length() != 0){
+                            stuurAlarm();
+                            for (int i = 0; i<overtreders.length(); i++){
+                            i++;
+                            client.publish("esp32/ontsmetten/id",overtreders.substring(i,i+2).c_str());
+                            i++;
+                            }
                         }
                     }
+                    overtreders.clear();
                 }
             }
         }
@@ -460,11 +482,13 @@ void reconnect() {
       client.subscribe("esp32/afstand/control");
       /*volgende twee kanalen zijn een beetje dom, maar ik weet ni exact hoe de coördinaten gaan 
       bepaald worden dus dit is efkens gemakkelijk*/
+      /*
       client.subscribe("esp32/afstand/x1");
       client.subscribe("esp32/afstand/y1");
       //deze zijn ni dom
       client.subscribe("esp32/afstand/x2");
       client.subscribe("esp32/afstand/y2");
+      */
       client.subscribe("esp32/afstand/x3");
       client.subscribe("esp32/afstand/y3");
       client.subscribe("esp32/afstand/x4");
@@ -519,6 +543,10 @@ void setup() {
 
     Serial.print("Piepkanaal: ");
     Serial.println(piepkanaal);
+
+    for(int i =0; i<aantalESP*2;i++){
+        coordinaten[i] = nullptr;
+    }
 }
 
 void loop() {
@@ -538,7 +566,6 @@ void loop() {
     Serial.println("Scanning");
     BLEScanResults foundDevices = pBLEScan->start(1);
     pBLEScan->clearResults();
-    Serial.println("Hier");
     
 
     /*if (interruptCounter > 0) {
