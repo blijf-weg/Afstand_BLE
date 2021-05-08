@@ -19,13 +19,13 @@ double calibratie2 = -40.27;
 double calibratie3 = -42.27;
 double calibratie4 = -40.27;
 
-double meterWaarde0 = -31;
+double meterWaarde0 = -32;
 //(log10(2.5) * 40) + (calibratie0);
-double meterWaarde1 = -31;
+double meterWaarde1 = -32;
 //(log10(2.5) * 40) + (calibratie1); 
-double meterWaarde2 = -31;
+double meterWaarde2 = -32;
 //(log10(2.5) * 40) + (calibratie2); 
-double meterWaarde3 = -31;
+double meterWaarde3 = -32;
 
 int size = 20;
 int teller0 = 0;
@@ -45,7 +45,7 @@ int buzzerPin = 15;
 int wachttijd = 10000;
 int cooldown = -wachttijd;
 int cooldown2 = 0;
-int maxTijdTussenAlarm = 20000;
+int maxTijdTussenAlarm = 20000000;
 
 
 //variabele om bij te houden of de buzzer actief is
@@ -68,19 +68,21 @@ CircBufferStatus_t initBuffers(uint8_t size){
 
 
 //const char* mqtt_server = "192.168.137.1";
-const char* mqtt_server = "192.168.137.1";
+const char* mqtt_server = "192.168.0.137";
 //"192.168.1.2"; 
 //"192.168.43.101";
 //192.168.0.137
 //const char* ssid = "telenet-648FE13";
 //const char* password = "YF74spyvpdkp";
-const char* ssid = "D84Z82H2 9418";
-const char* password = "73U-229k";
-const char* esp_naam = "Afstand_1";
-const char* piepkanaal = "esp32/afstand/piep/1";
+//const char* ssid = "D84Z82H2 9418";
+//const char* password = "73U-229k";
+const char* ssid = "hot";
+const char* password = "hothothot";
+const char* esp_naam = "Afstand_0";
+const char* piepkanaal = "esp32/afstand/piep/0";
 
-WiFiClient Afstand_1;
-PubSubClient client(Afstand_1);
+WiFiClient Afstand_0;
+PubSubClient client(Afstand_0);
 
 BLEScan *pBLEScan;
 BLECast bleCast(esp_naam);
@@ -120,7 +122,8 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 Serial.println(meterWaarde0);
                 if (send_to_broker && buffer0.getAverage() > meterWaarde0){
                     Serial.println("buffer 0 alarm");
-                    String s = esp_naam[8] + "0";
+                    String s = String(esp_naam[8]) + "0";
+                    Serial.println(s);
                     client.publish("esp32/ontsmetten/id", s.c_str());
                     client.publish("esp32/afstand/piep/0","1");
                     //stuurAlarm();
@@ -142,7 +145,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 Serial.println(meterWaarde1);
                 if (send_to_broker && buffer0.getAverage() > meterWaarde1){
                     Serial.println("buffer 1 alarm");
-                    String s = esp_naam[8] + "1";
+                    String s = String(esp_naam[8]) + "1";
                     client.publish("esp32/ontsmetten/id", s.c_str());
                     client.publish("esp32/afstand/piep/1","1");
                     //stuurAlarm();
@@ -168,7 +171,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 Serial.println(meterWaarde2);
                 if (send_to_broker && buffer2.getAverage() > meterWaarde2){
                     Serial.println("buffer 2 alarm");
-                    String s = esp_naam[8] + "2";
+                    String s = String(esp_naam[8]) + "2";
                     client.publish("esp32/ontsmetten/id", s.c_str());
                     client.publish("esp32/afstand/piep/2","1");
                     //stuurAlarm();
@@ -190,7 +193,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 Serial.println(meterWaarde3);
                 if (send_to_broker && buffer3.getAverage() > meterWaarde3){
                     Serial.println("buffer 3 alarm");
-                    String s = esp_naam[8] + "3";
+                    String s = String(esp_naam[8]) + "3";
                     client.publish("esp32/ontsmetten/id", s.c_str());
                     client.publish("esp32/afstand/piep/3","1");
                     //stuurAlarm();
@@ -267,6 +270,7 @@ void callback(char* topic, byte* message, unsigned int length) {
         if (strcmp(topic, piepkanaal) == 0){
             if(strcmp(topic,piepkanaal) == 0){
                 if(test == '1'){
+                    Serial.println("piepkanaal ontvangen");
                     beginPiep = true;
                     send_to_broker = false;
                     piepNonBlocking();
