@@ -33,6 +33,8 @@ int teller1 = 0;
 int teller2=0;
 int teller3=0;
 
+//Er worden 4 circulaire buffers gebruikt met een grootte die gelijk is aan size
+//In deze buffers komen de RSSI waarden die gemeten worden ten opzichte van de andere ESP's
 CircBuffer buffer0;
 CircBuffer buffer1;
 CircBuffer buffer2;
@@ -67,17 +69,17 @@ CircBufferStatus_t initBuffers(uint8_t size){
 }
 
 
-//const char* mqtt_server = "192.168.137.1";
-const char* mqtt_server = "192.168.0.137";
+const char* mqtt_server = "192.168.137.1";
+//const char* mqtt_server = "192.168.0.137";
 //"192.168.1.2"; 
 //"192.168.43.101";
 //192.168.0.137
 //const char* ssid = "telenet-648FE13";
 //const char* password = "YF74spyvpdkp";
-//const char* ssid = "D84Z82H2 9418";
-//const char* password = "73U-229k";
-const char* ssid = "hot";
-const char* password = "hothothot";
+const char* ssid = "D84Z82H2 9418";
+const char* password = "73U-229k";
+//const char* ssid = "";
+//const char* password = "excitedtuba713";
 const char* esp_naam = "Afstand_0";
 const char* piepkanaal = "esp32/afstand/piep/0";
 
@@ -255,7 +257,13 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
 
     char test = (char)message[0];
-
+    if(strcmp(topic, "esp32/ontsmetting/control") == 0){
+        if ('O' == test){
+            send_to_broker = true;
+            cooldown = millis();
+            cooldown2 = millis();
+        }
+    }
     if (strcmp(topic, "esp32/afstand/control") == 0){
         if ('1' == test)
             ESP.restart();
@@ -263,13 +271,6 @@ void callback(char* topic, byte* message, unsigned int length) {
             send_to_broker = false;
         else if ('3' == test)
             send_to_broker = true;
-    }
-    if(strcmp(topic, "esp32/ontsmetting/control") == 0){
-        if ('O' == test){
-            send_to_broker = true;
-            cooldown = millis();
-            cooldown2 = millis();
-        }
     }
     else {
         if (strcmp(topic, piepkanaal) == 0){
