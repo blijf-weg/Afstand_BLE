@@ -237,10 +237,8 @@ void piepNonBlocking(){
     else if (millis() - beginTijdstip > 10000 && piepActief){
         digitalWrite(buzzerPin, LOW);
         piepActief = false;
-        send_to_broker = true;
+        //send_to_broker = true;
         Serial.println("Stoppen met piepen");
-        cooldown = millis();
-        cooldown2 = millis();
     }
 }
 
@@ -265,6 +263,13 @@ void callback(char* topic, byte* message, unsigned int length) {
             send_to_broker = false;
         else if ('3' == test)
             send_to_broker = true;
+    }
+    if(strcmp(topic, "esp32/ontsmetting/control") == 0){
+        if ('O' == test){
+            send_to_broker = true;
+            cooldown = millis();
+            cooldown2 = millis();
+        }
     }
     else {
         if (strcmp(topic, piepkanaal) == 0){
