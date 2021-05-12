@@ -40,6 +40,18 @@ CircBuffer buffer1;
 CircBuffer buffer2;
 CircBuffer buffer3;
 
+//initialiseren van de buffers
+CircBufferStatus_t initBuffers(uint8_t size){
+    CircBufferStatus_t status = buffer0.init(size);
+    status = buffer1.init(size);
+    status = buffer2.init(size);
+    status = buffer3.init(size);
+    if(status != CB_SUCCESS){
+		return status;
+	}
+    return CB_SUCCESS;
+}
+
 //pin om de buzzer aan te sturen
 int buzzerPin = 15;
 
@@ -57,16 +69,7 @@ int beginTijdstip = 0;
 //variabele die het startsein moet geven om te beginnen piepen
 bool beginPiep = false;
 
-CircBufferStatus_t initBuffers(uint8_t size){
-    CircBufferStatus_t status = buffer0.init(size);
-    status = buffer1.init(size);
-    status = buffer2.init(size);
-    status = buffer3.init(size);
-    if(status != CB_SUCCESS){
-		return status;
-	}
-    return CB_SUCCESS;
-}
+
 
 
 const char* mqtt_server = "192.168.137.1";
@@ -80,11 +83,11 @@ const char* ssid = "D84Z82H2 9418";
 const char* password = "73U-229k";
 //const char* ssid = "";
 //const char* password = "excitedtuba713";
-const char* esp_naam = "Afstand_0";
-const char* piepkanaal = "esp32/afstand/piep/0";
+const char* esp_naam = "Afstand_1";
+const char* piepkanaal = "esp32/afstand/piep/1";
 
-WiFiClient Afstand_0;
-PubSubClient client(Afstand_0);
+WiFiClient Afstand_1;
+PubSubClient client(Afstand_1);
 
 BLEScan *pBLEScan;
 BLECast bleCast(esp_naam);
@@ -257,7 +260,7 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
 
     char test = (char)message[0];
-    if(strcmp(topic, "esp32/ontsmetting/control") == 0){
+    if(strcmp(topic, "esp32/ontsmetten/control") == 0){
         if ('O' == test){
             send_to_broker = true;
             cooldown = millis();
@@ -322,6 +325,7 @@ void reconnect() {
         Serial.println("connected");
         // Subscribe
         client.subscribe("esp32/afstand/control");
+        client.subscribe("esp32/ontsmetten/control");
         client.subscribe(piepkanaal);
     }
     else {
