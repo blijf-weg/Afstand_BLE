@@ -11,8 +11,6 @@
 
 using namespace std;
 
-volatile int interruptCounter;
-
 double calibratie0 = -40.23;
 double calibratie1 = -40.37;
 double calibratie2 = -40.27;
@@ -27,7 +25,6 @@ double meterWaarde2 = -32;
 //(log10(2.5) * 40) + (calibratie2); 
 double meterWaarde3 = -32;
 
-int size = 20;
 int teller0 = 0;
 int teller1 = 0;
 int teller2=0;
@@ -40,7 +37,9 @@ CircBuffer buffer1;
 CircBuffer buffer2;
 CircBuffer buffer3;
 
-//initialiseren van de buffers
+int size = 20;
+
+//methode voor het initialiseren van de buffers
 CircBufferStatus_t initBuffers(uint8_t size){
     CircBufferStatus_t status = buffer0.init(size);
     status = buffer1.init(size);
@@ -55,11 +54,15 @@ CircBufferStatus_t initBuffers(uint8_t size){
 //pin om de buzzer aan te sturen
 int buzzerPin = 15;
 
-//variabele om een cooldown periode te implementeren na verzenden van het alarm
-int wachttijd = 10000;
+//variabelen om een cooldown periode te implementeren na verzenden van het alarm
+//wachtijd is de minimale tijd die tussen twee overtredingen zit,
+//met andere woorden er zit minimaal een tijd van "wachttijd" milliseconden tussen de keren dat een speler piept
+//maxTijdTussenAlarm is de maximale tijd die tussen twee overtreding zit,
+// met andere woorden er zit maximaal een tijd van "maxTijdTusselAlarm" milliseconden tussen de keren dat een speler piept  
+int wachttijd = 30000;
+int maxTijdTussenAlarm = 20000000;
 int cooldown = -wachttijd;
 int cooldown2 = 0;
-int maxTijdTussenAlarm = 20000000;
 
 
 //variabele om bij te houden of de buzzer actief is
@@ -71,23 +74,25 @@ bool beginPiep = false;
 
 
 
+//const char* mqtt_server = "192.168.137.1";
+//const char* ssid = "D84Z82H2 9418";
+//const char* password = "73U-229k";
 
-const char* mqtt_server = "192.168.137.1";
-//const char* mqtt_server = "192.168.0.137";
 //"192.168.1.2"; 
 //"192.168.43.101";
 //192.168.0.137
 //const char* ssid = "telenet-648FE13";
 //const char* password = "YF74spyvpdkp";
-const char* ssid = "D84Z82H2 9418";
-const char* password = "73U-229k";
-//const char* ssid = "";
-//const char* password = "excitedtuba713";
-const char* esp_naam = "Afstand_1";
-const char* piepkanaal = "esp32/afstand/piep/1";
+const char* ssid = "NETGEAR68";
+const char* password = "excitedtuba713";
+const char* mqtt_server = "192.168.1.2";
 
-WiFiClient Afstand_1;
-PubSubClient client(Afstand_1);
+//De juiste naam instellen voor de ESP voor de wifi client en de mqtt cliet.
+const char* esp_naam = "Afstand_3";
+const char* piepkanaal = "esp32/afstand/piep/3";
+
+WiFiClient Afstand_3;
+PubSubClient client(Afstand_3);
 
 BLEScan *pBLEScan;
 BLECast bleCast(esp_naam);
@@ -106,6 +111,7 @@ void stuurAlarm();
 void piep();
 void piepNonBlocking();
 
+//Callback functie die gelinkt wordt aan de BLE scan. Hier wordt de verwerking van de RSSI-waarden gedaan
 class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
     void onResult(BLEAdvertisedDevice advertisedDevice)
@@ -120,12 +126,12 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             if(teller0 == size){
                 teller0 =0;
                 String rssistring = (String) buffer0.getAverage() + "_0" + esp_naam[8];
-                client.publish("esp32/afstand/rssi",rssistring.c_str());
+               // client.publish("esp32/afstand/rssi",rssistring.c_str());
                 Serial.print("Buffer0 gemiddelde: ");
                 Serial.println(rssistring.c_str());
 
                 Serial.println(meterWaarde0);
-                if (send_to_broker && buffer0.getAverage() > meterWaarde0){
+                if (send_to_broker && (millis() - cooldown) > wachttijd && buffer0.getAverage() > meterWaarde0){
                     Serial.println("buffer 0 alarm");
                     String s = String(esp_naam[8]) + "0";
                     Serial.println(s);
@@ -143,12 +149,12 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             if(teller1 == size){
                 teller1 = 0;
                 String rssistring= String(buffer1.getAverage()) + "_1" + esp_naam[8];
-                client.publish("esp32/afstand/rssi",rssistring.c_str());
+                //client.publish("esp32/afstand/rssi",rssistring.c_str());
                 Serial.print("Buffer1 gemiddelde: ");
                 Serial.println(rssistring.c_str());
 
                 Serial.println(meterWaarde1);
-                if (send_to_broker && buffer0.getAverage() > meterWaarde1){
+                if (send_to_broker && (millis() - cooldown) > wachttijd && buffer0.getAverage() > meterWaarde1){
                     Serial.println("buffer 1 alarm");
                     String s = String(esp_naam[8]) + "1";
                     client.publish("esp32/ontsmetten/id", s.c_str());
@@ -168,13 +174,11 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             if( teller2 == size){
                 teller2 =0;
                 String rssistring = (String) buffer2.getAverage() + "_2" + esp_naam[8];
-                client.publish("esp32/afstand/rssi",rssistring.c_str());
-                client.publish("esp32/afstand/rssi",rssistring.c_str());
                 Serial.print("Buffer2 gemiddelde: ");
                 Serial.println(rssistring.c_str());   
                
                 Serial.println(meterWaarde2);
-                if (send_to_broker && buffer2.getAverage() > meterWaarde2){
+                if (send_to_broker && (millis() - cooldown) > wachttijd && buffer2.getAverage() > meterWaarde2){
                     Serial.println("buffer 2 alarm");
                     String s = String(esp_naam[8]) + "2";
                     client.publish("esp32/ontsmetten/id", s.c_str());
@@ -196,7 +200,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
                 Serial.println(rssistring.c_str());
                 
                 Serial.println(meterWaarde3);
-                if (send_to_broker && buffer3.getAverage() > meterWaarde3){
+                if (send_to_broker && (millis() - cooldown) > wachttijd && buffer3.getAverage() > meterWaarde3){
                     Serial.println("buffer 3 alarm");
                     String s = String(esp_naam[8]) + "3";
                     client.publish("esp32/ontsmetten/id", s.c_str());
@@ -214,24 +218,41 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 void stuurAlarm(){
     if (send_to_broker && (millis() - cooldown) > wachttijd){
         Serial.println("Alarm!!!!!!");
-        client.publish("esp32/afstand/alarm", "1");
-        String s =(String) esp_naam[8] + esp_naam[8];
-        client.publish("esp32/ontsmetten/id",s.c_str());
+        //client.publish("esp32/afstand/alarm", "1");
+        client.publish("esp32/ontsmetten/control","1");
+        client.publish("eps32/vaccin/control","1");
+        client.publish("esp32/5g/control","1");
+        client.publish("eps32/morse/control","1");
+        client.publish("esp32/fitness/control","1");        
+        //String s =(String) esp_naam[8] + esp_naam[8];
+        //client.publish("esp32/ontsmetten/id",s.c_str());
     }
-    else{
+    /*else{
         if(send_to_broker && (millis() - cooldown2) > maxTijdTussenAlarm){
             Serial.println("Alarm!!!!!!");
-            client.publish("esp32/afstand/alarm", "1");    
+            client.publish("esp32/ontsmetten/control","1");
+            client.publish("eps32/vaccin/control","1");
+            client.publish("esp32/5g/control","1");
+            client.publish("eps32/morse/control","1");
+            client.publish("esp32/fitness/control","1"); 
         }
-    }
+    }*/
 }
 
 //non blocking functie om de buzzer te laten piepen
 void piepNonBlocking(){
+    
+    /*
     if((millis() - cooldown2) > maxTijdTussenAlarm){
         beginPiep = true;
     }
+    */
+   //Eerst controleren of er gepiept mag worden. Er moet dus een overtreding zijn en de module mag niet meer aan het piepen zijn.
     if (!piepActief && beginPiep && (millis() - cooldown) > wachttijd){
+        Serial.println(millis());
+        Serial.println(cooldown);
+        double tijdtussen = millis() - cooldown;
+        Serial.println(tijdtussen);
         beginTijdstip = millis();
         digitalWrite(buzzerPin, HIGH);
         Serial.println("beginnen met piepen");
@@ -239,7 +260,8 @@ void piepNonBlocking(){
         piepActief = true;
         send_to_broker = false;
     }
-    else if (millis() - beginTijdstip > 10000 && piepActief){
+    //vijf seconden piepen
+    else if (millis() - beginTijdstip > 5000 && piepActief){
         digitalWrite(buzzerPin, LOW);
         piepActief = false;
         //send_to_broker = true;
@@ -247,7 +269,7 @@ void piepNonBlocking(){
     }
 }
 
-
+//De MQTT callback, verwerking van MQTT berichten op gesubscribede kanalen
 void callback(char* topic, byte* message, unsigned int length) {
     Serial.print("Message arrived on topic: ");
     Serial.print(topic);
@@ -259,21 +281,27 @@ void callback(char* topic, byte* message, unsigned int length) {
         messageTemp += (char)message[i];
     }
 
+    //De verwachte berichten hebben maar een lengte van 1, enkel het nulde element van het bericht moet gecontroleerd worden.
     char test = (char)message[0];
-    if(strcmp(topic, "esp32/ontsmetten/control") == 0){
-        if ('O' == test){
+    /*if(strcmp(topic, "esp32/ontsmetten/control") == 0){
+        if ('2' == test){
+            Serial.println("Hier");
             send_to_broker = true;
             cooldown = millis();
             cooldown2 = millis();
         }
-    }
+    }*/
     if (strcmp(topic, "esp32/afstand/control") == 0){
         if ('1' == test)
             ESP.restart();
-        else if('2' == test)
-            send_to_broker = false;
-        else if ('3' == test)
+        else if('2' == test){
+            Serial.println("Hier");
             send_to_broker = true;
+            cooldown = millis();
+            cooldown2 = millis();
+        }
+        else if ('3' == test)
+            send_to_broker = false;
     }
     else {
         if (strcmp(topic, piepkanaal) == 0){
@@ -325,7 +353,7 @@ void reconnect() {
         Serial.println("connected");
         // Subscribe
         client.subscribe("esp32/afstand/control");
-        client.subscribe("esp32/ontsmetten/control");
+        //client.subscribe("esp32/ontsmetten/control");
         client.subscribe(piepkanaal);
     }
     else {
@@ -359,6 +387,7 @@ void setup() {
         Serial.println("Transmission power changed\n");
     }
     sprintf(data,"%d",9);
+    //initialiseren van de buffers
     initBuffers(size);
 
     pinMode(buzzerPin, OUTPUT);
