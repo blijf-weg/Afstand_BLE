@@ -249,10 +249,6 @@ void piepNonBlocking(){
     */
    //Eerst controleren of er gepiept mag worden. Er moet dus een overtreding zijn en de module mag niet meer aan het piepen zijn.
     if (!piepActief && beginPiep && (millis() - cooldown) > wachttijd){
-        Serial.println(millis());
-        Serial.println(cooldown);
-        double tijdtussen = millis() - cooldown;
-        Serial.println(tijdtussen);
         beginTijdstip = millis();
         digitalWrite(buzzerPin, HIGH);
         Serial.println("beginnen met piepen");
@@ -292,7 +288,7 @@ void callback(char* topic, byte* message, unsigned int length) {
         }
     }*/
     if (strcmp(topic, "esp32/afstand/control") == 0){
-        if ('1' == test)
+        if ('0' == test)
             ESP.restart();
         else if('2' == test){
             Serial.println("Hier");
@@ -300,7 +296,7 @@ void callback(char* topic, byte* message, unsigned int length) {
             cooldown = millis();
             cooldown2 = millis();
         }
-        else if ('3' == test)
+        else if ('1' == test)
             send_to_broker = false;
     }
     else {
